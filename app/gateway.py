@@ -6,6 +6,7 @@ from typing import Protocol
 from app.fast_paths import execute, match_task
 from app.guardrails import preflight
 from app.models import Prediction, Route
+from app.telemetry import Observation, ReasoningResult
 
 
 class Classifier(Protocol):
@@ -13,11 +14,13 @@ class Classifier(Protocol):
 
 
 class Reasoner(Protocol):
-    async def answer(self, prompt: str) -> str: ...
+    async def answer(self, prompt: str) -> str | ReasoningResult: ...
 
 
 class ProviderUnavailable(Exception):
     """The configured reasoning provider cannot currently serve requests."""
+
+    result: ReasoningResult | None = None
 
 
 class RuleClassifier:
@@ -62,13 +65,18 @@ class Gateway:
     classifier: Classifier = field(default_factory=RuleClassifier)
     reasoner: Reasoner = field(default_factory=UnconfiguredReasoner)
 
-    async def query(self, prompt: str) -> tuple[Prediction, Route, str, bool]:
+    async def query(
+        self, prompt: str, observation: Observation | None = None
+    ) -> tuple[Prediction, Route, str, bool]:
+        observation = observation if observation is not None else Observation()
         prediction = preflight(prompt)
         if prediction is None:
             prediction = await self.classifier.classify(prompt)
         task = match_task(prompt)
         available = task is not None and task.intent == prediction.intent
         route = select_route(prediction, fast_path_available=available)
+        observation.prediction = prediction
+        observation.route = route
         if route == Route.BLOCK:
             return prediction, route, "This request was blocked by the routing policy.", False
         if route == Route.REVIEW:
@@ -81,5 +89,14 @@ class Gateway:
         if route == Route.FAST_PATH:
             assert task is not None
             return prediction, route, execute(task), False
-        answer = await self.reasoner.answer(prompt)
+        observation.provider_attempted = not isinstance(self.reasoner, UnconfiguredReasoner)
+        try:
+            answer = await self.reasoner.answer(prompt)
+        except ProviderUnavailable as exc:
+            if exc.result:
+                observation.model, observation.usage = exc.result.model, exc.result.usage
+            raise
+        if isinstance(answer, ReasoningResult):
+            observation.model, observation.usage = answer.model, answer.usage
+            answer = answer.text
         return prediction, route, answer, True

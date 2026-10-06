@@ -1,5 +1,7 @@
 """Environment configuration; credentials never appear in settings representations."""
 
+from datetime import date
+from decimal import Decimal
 from typing import Literal
 
 from pydantic import Field, SecretStr, field_validator, model_validator
@@ -16,6 +18,13 @@ class Settings(BaseSettings):
     openai_model: str = ""
     provider_timeout_seconds: float = Field(default=30, gt=0, le=120, allow_inf_nan=False)
     openai_max_output_tokens: int = Field(default=2048, ge=16, le=32768)
+    database_path: str = "data/reflex.db"
+    retention_days: int = Field(default=30, ge=1, le=3650)
+    pricing_model: str | None = None
+    pricing_date: date | None = None
+    input_usd_per_million: Decimal | None = Field(default=None, ge=0, allow_inf_nan=False)
+    output_usd_per_million: Decimal | None = Field(default=None, ge=0, allow_inf_nan=False)
+    cached_input_usd_per_million: Decimal | None = Field(default=None, ge=0, allow_inf_nan=False)
 
     @field_validator("openai_model")
     @classmethod
@@ -24,6 +33,23 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def require_credentials(self) -> "Settings":
+        rates = (
+            self.input_usd_per_million,
+            self.output_usd_per_million,
+            self.cached_input_usd_per_million,
+        )
+        if any(rate is not None for rate in rates):
+            if (
+                self.input_usd_per_million is None
+                or self.output_usd_per_million is None
+                or not self.pricing_model
+                or self.pricing_date is None
+            ):
+                raise ValueError(
+                    "Pricing requires input/output rates, PRICING_MODEL and PRICING_DATE"
+                )
+        if not self.database_path.strip() or self.database_path == ":memory:":
+            raise ValueError("DATABASE_PATH must be a persistent file path")
         if self.system2_provider == "openai":
             key = self.openai_api_key.get_secret_value() if self.openai_api_key else ""
             if not key or any(character.isspace() for character in key):

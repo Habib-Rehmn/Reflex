@@ -7,6 +7,7 @@ from pydantic import BaseModel, ConfigDict, ValidationError
 
 from app.config import Settings
 from app.gateway import ProviderUnavailable
+from app.telemetry import ReasoningResult, TokenUsage
 
 
 class Content(BaseModel):
@@ -54,7 +55,7 @@ class OpenAIReasoner:
         self.settings = settings
         self.transport = transport
 
-    async def answer(self, prompt: str) -> str:
+    async def answer(self, prompt: str) -> ReasoningResult:
         key = self.settings.openai_api_key
         if key is None:
             raise ProviderUnavailable("OpenAI is not configured.")
@@ -77,7 +78,30 @@ class OpenAIReasoner:
                         },
                     )
                     response.raise_for_status()
-                    return parse_answer(response.json())
+                    payload = response.json()
+                    usage = None
+                    model = payload.get("model") if isinstance(payload, dict) else None
+                    if not isinstance(model, str):
+                        model = None
+                    try:
+                        raw = payload.get("usage")
+                        if isinstance(raw, dict):
+                            details = raw.get("input_tokens_details") or {}
+                            usage = TokenUsage(
+                                input_tokens=raw.get("input_tokens"),
+                                output_tokens=raw.get("output_tokens"),
+                                cached_input_tokens=details.get("cached_tokens"),
+                                cache_write_input_tokens=details.get("cache_write_tokens", 0),
+                            )
+                    except (AttributeError, ValidationError):
+                        pass  # Missing or malformed usage is unknown, never zero.
+                    try:
+                        text = parse_answer(payload)
+                    except (ProviderUnavailable, ValidationError):
+                        error = ProviderUnavailable("OpenAI returned no complete answer.")
+                        error.result = ReasoningResult("", model, usage)
+                        raise error from None
+                    return ReasoningResult(text, model, usage)
         except (httpx.HTTPError, TimeoutError, ValueError, ValidationError):
             # Do not leak upstream response bodies, prompts, or credentials.
             raise ProviderUnavailable("OpenAI could not complete the request.") from None

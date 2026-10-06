@@ -64,7 +64,7 @@ def test_request_contract_and_text_extraction():
         )
 
     provider = OpenAIReasoner(settings(), transport=httpx.MockTransport(handler))
-    assert asyncio.run(provider.answer("Explain consensus")) == "First\nSecond"
+    assert asyncio.run(provider.answer("Explain consensus")).text == "First\nSecond"
 
 
 @pytest.mark.parametrize("status", [301, 400, 401, 403, 429, 500, 503])
@@ -130,7 +130,7 @@ def test_refusal_is_preserved():
             )
         ),
     )
-    assert asyncio.run(provider.answer("hello")) == "I cannot help with that request."
+    assert asyncio.run(provider.answer("hello")).text == "I cannot help with that request."
 
 
 @pytest.mark.parametrize("error", [httpx.ConnectError, httpx.ReadTimeout])

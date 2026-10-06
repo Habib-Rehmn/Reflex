@@ -40,3 +40,7 @@ class QueryResponse(BaseModel):
     prediction: Prediction
     llm_used: bool
     latency_ms: float
+    model: str | None = None
+    usage: dict[str, int | None] | None = None
+    estimated_cost_usd: str | None = None
+    metadata_persisted: bool = False

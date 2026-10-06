@@ -13,7 +13,7 @@ FAQ = {
         "Other requests use System 2 when configured."
     ),
     "do you store my prompts?": (
-        "Reflex does not currently persist prompts. Escalated prompts are sent to OpenAI "
+        "Reflex stores request metadata, not prompts or answers. Escalated prompts go to OpenAI "
         "when configured; local handling does not call OpenAI."
     ),
 }

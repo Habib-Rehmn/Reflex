@@ -41,8 +41,7 @@ context or languages other than English.
 
 The in-process catalog includes `service.api`, `service.health`, and
 `project.reflex`. Unknown keys return a local not-found answer. This catalog has
-no customer records, live status or private data. SQLite persistence comes in the
-next commit; no external lookup is implied.
+no customer records, live status or private data. SQLite stores request metadata separately; no external lookup is implied.
 
 ## Safety precedence
 
@@ -61,7 +60,7 @@ can evade detection. Secret detection also has false positives and false negativ
 A non-match is not proof that a prompt is safe or free of sensitive data.
 
 No human review queue exists: `review` holds the request without forwarding it,
-storing it, or creating a task for a person. Block and review responses do not echo
+storing its text, or creating a task for a person. Metadata records the held route. Block and review responses do not echo
 the prompt. A future classifier's risk 3–5 decisions also prevent handler/provider
 execution. Intent alone cannot force a handler: the original prompt must match
 that handler and confidence/complexity requirements must pass.

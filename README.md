@@ -55,7 +55,7 @@ Send any of these prompts to `POST /query` without an API key:
 Ambiguous support/sentiment requests escalate. Invalid arithmetic commands return
 an explanatory local answer. See [local routing](docs/local-routing.md) for bounds,
 supported commands, and guardrail limitations. The lookup catalog is in memory;
-SQLite persistence is the next module.
+SQLite stores request metadata separately from that catalog.
 
 ## Enable GPT
 
@@ -85,8 +85,25 @@ than a fabricated answer or partial success. Provider refusal text remains on th
 
 Each request owns and closes its HTTP client. Invalid enabled-provider settings
 fail at application creation. `/health` still reports liveness only; account access
-and model availability are established by an actual provider request. This module
-does not yet record token usage or costs.
+and model availability are established by an actual provider request. Query responses include reported token usage, optional USD cost estimates, and a
+`metadata_persisted` flag. Missing usage or pricing remains unknown.
+
+## History and metrics
+
+SQLite stores request metadata without prompts or answers. Defaults are
+`DATABASE_PATH=data/reflex.db` and `RETENTION_DAYS=30`.
+
+```bash
+curl 'http://127.0.0.1:8000/requests?limit=10'
+curl http://127.0.0.1:8000/metrics
+```
+
+Metrics include routes, failed requests, provider attempts, mean/P95 gateway
+latency, known token totals, and estimated cost with unknown-value counts. Optional
+pricing requires verified rates, an exact model name and a pricing date; no prices
+or savings are assumed. See [metrics documentation](docs/metrics.md) for configuration,
+retention, failure behavior, and latency definitions. Keep the history endpoints
+local until authentication is added.
 
 ## Check changes
 
@@ -100,7 +117,7 @@ Tests exercise HTTP validation, FAQ responses, provider escalation, unavailable
 providers, and safety precedence without calling external services. The HTTP tests
 use HTTPX's ASGI transport to avoid network sockets and background threads.
 
-Validation: **112 tests passed**, including bounded arithmetic, local handlers,
+Validation: **124 tests passed**, including bounded arithmetic, local handlers,
 preflight precedence, provider contracts, timeouts, and gateway HTTP behavior.
 Ruff lint and formatting checks passed.
 
@@ -120,8 +137,8 @@ excluded from version control.
 Commits:
 
 1. `feat: add API and routing foundation`
-2. `feat: add OpenAI integration, fast paths, and guardrails` (ready to commit)
-3. Persistence and metrics
+2. `feat: add OpenAI integration, fast paths, and guardrails`
+3. `feat: add SQLite request history and usage metrics` (ready to commit)
 4. Evaluation
 5. Dashboard and release
 
@@ -131,6 +148,7 @@ and can be included in a subsequent module or a sixth integration commit.
 
 ## Next module
 
-Add SQLite request metadata and metrics. Laya integration requires the exact
-library/service documentation. Later modules add measured evaluation and a dashboard.
+Add a labeled evaluation dataset and a reproducible GPT-baseline comparison.
+Laya integration still requires its exact library/service documentation. The final
+module adds the dashboard and release tooling.
 No latency, quality, or cost-savings claims have been measured yet.
