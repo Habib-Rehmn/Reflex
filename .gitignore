@@ -1,0 +1,18 @@
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.env
+.env.*
+!.env.example
+*.db
+*.db-*
+coverage.xml
+.coverage
+htmlcov/
+.DS_Store
+
+# Local project planning notes
+/project.md
+/docs/original-outline.md
