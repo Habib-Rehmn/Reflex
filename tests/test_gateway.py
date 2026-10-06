@@ -74,7 +74,7 @@ def test_routing_precedence(overrides, available, expected):
 
 
 def test_faq_response():
-    with TestClient(create_app()) as client:
+    with TestClient(create_app(Gateway())) as client:
         response = client.post("/query", json={"prompt": "  WHAT IS REFLEX?  "})
     assert response.status_code == 200
     body = response.json()
@@ -98,12 +98,12 @@ def test_faq_response():
     ],
 )
 def test_invalid_input(body):
-    with TestClient(create_app()) as client:
+    with TestClient(create_app(Gateway())) as client:
         assert client.post("/query", json=body).status_code == 422
 
 
 def test_unconfigured_reasoning_returns_honest_error():
-    with TestClient(create_app()) as client:
+    with TestClient(create_app(Gateway())) as client:
         result = client.post("/query", json={"prompt": "Explain distributed consensus"})
     assert result.status_code == 503
     assert result.json()["error"] == "provider_unavailable"

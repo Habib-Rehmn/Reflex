@@ -6,12 +6,20 @@ from uuid import uuid4
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 
+from app.config import Settings
 from app.gateway import Gateway, ProviderUnavailable
 from app.models import QueryRequest, QueryResponse
+from app.openai_provider import OpenAIReasoner
 
 
-def create_app(gateway: Gateway | None = None) -> FastAPI:
-    service = gateway if gateway is not None else Gateway()
+def create_app(gateway: Gateway | None = None, *, settings: Settings | None = None) -> FastAPI:
+    if gateway is not None:
+        service = gateway
+    else:
+        config = settings if settings is not None else Settings()
+        service = Gateway()
+        if config.system2_provider == "openai":
+            service.reasoner = OpenAIReasoner(config)
     api = FastAPI(title="Reflex AI Gateway", version="0.1.0")
 
     @api.get("/health")
@@ -34,7 +42,7 @@ def create_app(gateway: Gateway | None = None) -> FastAPI:
                 content={
                     "request_id": str(request_id),
                     "error": "provider_unavailable",
-                    "detail": "System 2 is unavailable. Try again once a provider is configured.",
+                    "detail": "The AI provider is unavailable. Check configuration or retry later.",
                 },
             )
         return QueryResponse(

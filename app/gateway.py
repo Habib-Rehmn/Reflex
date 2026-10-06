@@ -3,14 +3,9 @@
 from dataclasses import dataclass, field
 from typing import Protocol
 
+from app.fast_paths import execute, match_task
+from app.guardrails import preflight
 from app.models import Prediction, Route
-
-FAQ = {
-    "what is reflex?": (
-        "Reflex answers simple requests locally and routes deeper questions to GPT."
-    ),
-    "what can you do?": "Currently I can answer these FAQs. More fast paths and GPT are coming.",
-}
 
 
 class Classifier(Protocol):
@@ -29,9 +24,10 @@ class RuleClassifier:
     """Bootstrap classifier, not Laya and not a safety detector."""
 
     async def classify(self, prompt: str) -> Prediction:
-        known = prompt.casefold() in FAQ
+        task = match_task(prompt)
+        known = task is not None
         return Prediction(
-            intent="faq" if known else "unknown",
+            intent=task.intent if task else "unknown",
             complexity=1 if known else 3,
             requires_llm=not known,
             risk=0,
@@ -67,9 +63,12 @@ class Gateway:
     reasoner: Reasoner = field(default_factory=UnconfiguredReasoner)
 
     async def query(self, prompt: str) -> tuple[Prediction, Route, str, bool]:
-        prediction = await self.classifier.classify(prompt)
-        local_answer = FAQ.get(prompt.casefold()) if prediction.intent == "faq" else None
-        route = select_route(prediction, fast_path_available=local_answer is not None)
+        prediction = preflight(prompt)
+        if prediction is None:
+            prediction = await self.classifier.classify(prompt)
+        task = match_task(prompt)
+        available = task is not None and task.intent == prediction.intent
+        route = select_route(prediction, fast_path_available=available)
         if route == Route.BLOCK:
             return prediction, route, "This request was blocked by the routing policy.", False
         if route == Route.REVIEW:
@@ -80,7 +79,7 @@ class Gateway:
                 False,
             )
         if route == Route.FAST_PATH:
-            assert local_answer is not None
-            return prediction, route, local_answer, False
+            assert task is not None
+            return prediction, route, execute(task), False
         answer = await self.reasoner.answer(prompt)
         return prediction, route, answer, True
