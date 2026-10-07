@@ -5,8 +5,8 @@ handling supported simple requests locally.
 
 The API provides validated requests, deterministic routing, five local capabilities, preflight guardrails, and
 an asynchronous OpenAI provider. The bootstrap classifier uses explicit command
-and keyword rules, not a trained model. **Laya integration is pending identification
-of its library/service.** Local-only mode is the default and needs no credentials;
+and keyword rules, not a trained model. An opt-in [Laya HTTP classifier](docs/laya.md) is also available.
+Its real model inference has not yet been validated here. Local-only mode is the default and needs no credentials;
 unknown prompts return HTTP 503 until OpenAI is enabled.
 
 ## Run locally
@@ -42,7 +42,7 @@ classifier. See [routing behavior and limitations](docs/local-routing.md).
 
 ## Dashboard and Docker
 
-The dashboard shows request totals, local routes, provider attempts, failures,
+The dashboard shows request totals, local routes, GPT attempts, failures,
 mean/P95 latency, known estimated cost, and recent metadata. Submit a local command
 from the same page; unknown prompts can incur charges when GPT is configured.
 
@@ -84,6 +84,12 @@ Ambiguous support/sentiment requests escalate. Invalid arithmetic commands retur
 an explanatory local answer. See [local routing](docs/local-routing.md) for bounds,
 supported commands, and guardrail limitations. The lookup catalog is in memory;
 SQLite stores request metadata separately from that catalog.
+
+## Enable Laya (optional)
+
+See [Laya setup](docs/laya.md) to run a separate classifier server and set
+`SYSTEM1_PROVIDER=laya`. The default remains `rules`. Classifier failures return
+503; they do not silently bypass classification and call GPT.
 
 ## Enable GPT
 
@@ -158,7 +164,7 @@ Tests exercise HTTP validation, FAQ responses, provider escalation, unavailable
 providers, and safety precedence without calling external services. The HTTP tests
 use HTTPX's ASGI transport to avoid network sockets and background threads.
 
-Validation: **141 Python tests passed**, plus the dashboard JavaScript behavior suite, including bounded arithmetic, local handlers,
+Validation: **165 Python tests passed**, plus the dashboard JavaScript behavior suite, including bounded arithmetic, local handlers,
 preflight precedence, provider contracts, timeouts, and gateway HTTP behavior.
 Ruff lint, formatting, JavaScript syntax, and Compose configuration checks passed.
 Docker build/startup could not be verified locally because daemon access is denied;
@@ -184,15 +190,16 @@ Commits:
 3. `feat: add SQLite request history and usage metrics`
 4. `feat: add reproducible routing and baseline evaluation`
 5. `feat: add dashboard and local release tooling`
-6. `fix: guard live evaluation inputs and preserve datasets` (ready to commit)
+6. `fix: guard live evaluation inputs and preserve datasets`
+7. `feat: integrate optional Laya System-1 classifier` (ready to commit)
 
 Provider integration and local handlers were grouped into commit 2 to
-preserve the target of 5–6 commits. Laya's adapter is still pending its documentation
-and requires its repository/API link before implementation. The sixth commit fixes
+keep the initial implementation within six commits. The remaining Laya integration
+is an additional commit, without rewriting existing history. The Laya adapter is now implemented against the matching upstream project; real
+inference validation remains outstanding. The sixth commit fixes
 evaluation issues found during the final integration review.
 
 ## Remaining work
 
-The five planned implementation modules are now present. Laya integration still requires its exact
-library/service documentation. Live baseline measurements remain pending credentials.
+The five planned implementation modules are now present. Laya model inference still needs a live validation run. Live baseline measurements remain pending credentials.
 No latency, quality, or cost-savings claims have been measured yet.

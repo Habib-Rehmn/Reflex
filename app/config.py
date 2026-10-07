@@ -3,6 +3,7 @@
 from datetime import date
 from decimal import Decimal
 from typing import Literal
+from urllib.parse import urlsplit
 
 from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -12,6 +13,28 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=".env", extra="ignore", hide_input_in_errors=True, frozen=True
     )
+
+    system1_provider: Literal["rules", "laya"] = "rules"
+    laya_endpoint: str = "http://127.0.0.1:8001/v1/systemone"
+    laya_api_key: SecretStr | None = None
+    laya_timeout_seconds: float = Field(default=30, gt=0, le=120, allow_inf_nan=False)
+
+    @field_validator("laya_endpoint")
+    @classmethod
+    def validate_laya_endpoint(cls, value: str) -> str:
+        parsed = urlsplit(value)
+        if (
+            parsed.scheme not in ("http", "https")
+            or not parsed.hostname
+            or parsed.username
+            or parsed.password
+            or parsed.query
+            or parsed.fragment
+        ):
+            raise ValueError("LAYA_ENDPOINT must be an HTTP(S) URL without credentials or query")
+        if parsed.scheme == "http" and parsed.hostname not in ("localhost", "127.0.0.1", "::1"):
+            raise ValueError("Remote Laya endpoints require HTTPS")
+        return value
 
     system2_provider: Literal["disabled", "openai"] = "disabled"
     openai_api_key: SecretStr | None = None

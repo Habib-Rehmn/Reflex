@@ -31,7 +31,8 @@ that return usage. Input, output, cached-input and cache-write counts are retain
 Missing or malformed usage remains unknown (`null`); a missing cached-input
 breakdown is also unknown. If System 2 was never invoked, its usage and cost are
 known zero, including locally rejected or unconfigured-provider requests.
-Classifier costs are not measured; the current classifier is local rules.
+Classifier costs are not measured. Rules are the default; when optional Laya is
+enabled, these totals still cover only System 2, not Laya compute or service charges.
 
 Enable USD estimates by configuring `PRICING_MODEL`, `PRICING_DATE`,
 `INPUT_USD_PER_MILLION`, and `OUTPUT_USD_PER_MILLION`. Cached input additionally

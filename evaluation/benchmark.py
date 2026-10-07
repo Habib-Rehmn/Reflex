@@ -17,6 +17,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from app.config import Settings
 from app.gateway import Gateway, ProviderUnavailable
 from app.guardrails import preflight
+from app.laya_provider import LayaClassifier
 from app.models import QueryRequest, Route
 from app.openai_provider import OpenAIReasoner
 from app.telemetry import Observation, ReasoningResult, estimate_cost
@@ -131,6 +132,8 @@ async def run(dataset, settings, *, live=False, repeats=1, seed=42, reasoner=Non
         if reasoner is None and settings.system2_provider != "openai":
             raise ValueError("Live evaluation requires SYSTEM2_PROVIDER=openai")
         gateway.reasoner = reasoner if reasoner is not None else OpenAIReasoner(settings)
+        if settings.system1_provider == "laya":
+            gateway.classifier = LayaClassifier(settings)
     cases = [case for case in dataset.cases if not live or case.live_eligible]
     if not cases:
         raise ValueError("No eligible evaluation cases")
@@ -163,6 +166,7 @@ async def run(dataset, settings, *, live=False, repeats=1, seed=42, reasoner=Non
         "warmup_requests": 0,
         "selected_cases": len(cases),
         "excluded_cases": len(dataset.cases) - len(cases),
+        "classifier": settings.system1_provider if live else "rules",
         "configured_model": settings.openai_model if live else None,
         "max_output_tokens": settings.openai_max_output_tokens if live else None,
         "timeout_seconds": settings.provider_timeout_seconds if live else None,

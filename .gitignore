@@ -19,3 +19,4 @@ htmlcov/
 
 # Local benchmark results
 /reports/
+/.laya-venv/

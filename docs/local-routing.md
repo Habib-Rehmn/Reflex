@@ -65,5 +65,5 @@ the prompt. A future classifier's risk 3–5 decisions also prevent handler/prov
 execution. Intent alone cannot force a handler: the original prompt must match
 that handler and confidence/complexity requirements must pass.
 
-Laya integration remains pending its repository/documentation URL. Do not describe
-the current rules as an implemented Laya model or production safety guarantee.
+An optional Laya HTTP adapter is available; see [setup and limits](laya.md).
+The default rules are not Laya or a production safety guarantee.

@@ -55,7 +55,7 @@ The server has no authentication or rate limiting. Compose binds only to localho
 keep it there for this prototype. Before public deployment, add authentication to
 query/history/metrics, request size and rate limits, TLS, access restrictions,
 and a database strategy suited to expected concurrency. Guardrails are narrow
-rules, not comprehensive moderation; Laya remains unimplemented pending its API.
+rules, not comprehensive moderation; Laya is optional and requires a separately configured server.
 SQLite operations are synchronous and suitable only for modest local traffic.
 
 ## Data backup and rollback
@@ -72,7 +72,6 @@ resolve startup/storage errors without first inspecting and backing it up.
 
 ## Outstanding validation
 
-No live GPT benchmark or measured cost saving has been established. Laya's exact
-repository/documentation is still required. Browser visual inspection, Docker
+No live GPT benchmark or measured cost saving has been established. The Laya adapter still requires real-model validation. Browser visual inspection, Docker
 build/startup, and a clean online dependency install must be verified in an
 environment with those tools and network access before a public release.

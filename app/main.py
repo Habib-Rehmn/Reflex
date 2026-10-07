@@ -15,6 +15,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.config import Settings
 from app.gateway import Gateway, ProviderUnavailable
+from app.laya_provider import LayaClassifier
 from app.models import QueryRequest, QueryResponse
 from app.openai_provider import OpenAIReasoner
 from app.storage import RequestStore
@@ -34,6 +35,8 @@ def create_app(
         store if store is not None else RequestStore(config.database_path, config.retention_days)
     )
     service = gateway if gateway is not None else Gateway()
+    if gateway is None and config.system1_provider == "laya":
+        service.classifier = LayaClassifier(config)
     if gateway is None and config.system2_provider == "openai":
         service.reasoner = OpenAIReasoner(config)
     api = FastAPI(title="Reflex AI Gateway", version="0.5.0")

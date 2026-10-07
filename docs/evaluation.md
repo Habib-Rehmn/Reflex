@@ -43,7 +43,10 @@ For N eligible cases and R repeats, the maximum is 2 × N × R provider calls. N
 live benchmark is executed automatically by tests or by the offline command.
 
 Safety cases and app-specific questions are excluded from the bundled live subset.
-Both arms see the same remaining cases and model/output-limit/timeout settings.
+Both arms see the same remaining cases and GPT model/output-limit/timeout settings.
+Live gateway runs use the configured System-1 classifier (rules or Laya); offline
+runs always use rules. The classifier name is included in the report. Cost/usage
+metrics cover GPT only, not Laya compute or service charges.
 Case order and arm order are shuffled using the recorded seed. Runs are sequential,
 with no warmup and no automatic retries. Provider caching and remote load can
 still bias comparisons; repeated samples are not statistically independent.
