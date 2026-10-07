@@ -1,0 +1,43 @@
+name: Checks
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      SYSTEM2_PROVIDER: disabled
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --check app/static/dashboard.js
+      - run: node --test tests/dashboard.test.cjs
+      - run: pip install uv
+      - run: uv sync
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
+      - run: uv run pytest -q
+      - run: uv run python -m evaluation.benchmark
+      - uses: actions/upload-artifact@v4
+        with:
+          name: offline-evaluation
+          path: reports/evaluation.json
+      - run: docker build -t reflex:test .
+      - name: Smoke test container
+        run: |
+          docker run -d --name reflex-smoke -p 127.0.0.1:8000:8000 reflex:test
+          trap 'docker logs reflex-smoke; docker rm -f reflex-smoke' EXIT
+          for attempt in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8000/health; then break; fi
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:8000/health
+          curl -fsS http://127.0.0.1:8000/ > /tmp/dashboard.html
+          curl -fsS http://127.0.0.1:8000/static/dashboard.js > /tmp/dashboard.js
+          curl -fsS http://127.0.0.1:8000/query -H 'Content-Type: application/json' -d '{"prompt":"calc: 2+2"}' > /tmp/query.json
+          python -c "import json; result=json.load(open('/tmp/query.json')); assert result['answer']=='4'; assert result['metadata_persisted'] is True"

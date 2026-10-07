@@ -4,12 +4,14 @@ import json
 import logging
 import sqlite3
 from datetime import UTC, datetime
+from pathlib import Path
 from time import perf_counter
 from uuid import uuid4
 
 from fastapi import FastAPI, Query, Request
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 
 from app.config import Settings
 from app.gateway import Gateway, ProviderUnavailable
@@ -34,7 +36,14 @@ def create_app(
     service = gateway if gateway is not None else Gateway()
     if gateway is None and config.system2_provider == "openai":
         service.reasoner = OpenAIReasoner(config)
-    api = FastAPI(title="Reflex AI Gateway", version="0.3.0")
+    api = FastAPI(title="Reflex AI Gateway", version="0.5.0")
+
+    static_dir = Path(__file__).with_name("static")
+    api.mount("/static", StaticFiles(directory=static_dir), name="static")
+
+    @api.get("/", include_in_schema=False)
+    async def dashboard():
+        return FileResponse(static_dir / "index.html")
 
     async def record(request_id, observation, status, latency, error=None):
         usage = observation.usage

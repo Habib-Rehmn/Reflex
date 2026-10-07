@@ -18,7 +18,7 @@ uv sync
 uv run uvicorn app.main:app --reload --host 127.0.0.1
 ```
 
-Open http://127.0.0.1:8000/docs for the interactive API. `GET /health` is a liveness
+Open http://127.0.0.1:8000/ for the dashboard or `/docs` for the interactive API. `GET /health` is a liveness
 check; it does not assert that external providers are configured.
 
 ```bash
@@ -39,6 +39,34 @@ before the classifier: matching harmful-instruction phrases block, and likely
 pasted secrets are held for review. These are narrow rules, not comprehensive
 moderation. Non-matching inputs still receive placeholder risk 0 from the bootstrap
 classifier. See [routing behavior and limitations](docs/local-routing.md).
+
+## Dashboard and Docker
+
+The dashboard shows request totals, local routes, provider attempts, failures,
+mean/P95 latency, known estimated cost, and recent metadata. Submit a local command
+from the same page; unknown prompts can incur charges when GPT is configured.
+
+```bash
+docker compose up --build -d
+```
+
+Compose binds to localhost and preserves SQLite in a named volume. See the
+[release runbook](docs/release.md) for configuration, CI, backups, and remaining
+release checks.
+
+```mermaid
+flowchart LR
+    UI[Dashboard or API client] --> API[FastAPI]
+    API --> Rules[Preflight and classifier]
+    Rules --> Local[Local handlers]
+    Rules --> GPT[OpenAI provider]
+    Rules --> Hold[Block or hold]
+    Local --> Result[Response and metadata]
+    GPT --> Result
+    Hold --> Result
+    Result --> DB[(SQLite)]
+    DB --> UI
+```
 
 ## Try the local handlers
 
@@ -123,15 +151,18 @@ for eligibility, reproducibility, failure handling and scoring limits.
 uv run pytest -q
 uv run ruff check .
 uv run ruff format --check .
+node --test tests/dashboard.test.cjs
 ```
 
 Tests exercise HTTP validation, FAQ responses, provider escalation, unavailable
 providers, and safety precedence without calling external services. The HTTP tests
 use HTTPX's ASGI transport to avoid network sockets and background threads.
 
-Validation: **132 tests passed**, including bounded arithmetic, local handlers,
+Validation: **134 Python tests passed**, plus the dashboard JavaScript behavior suite, including bounded arithmetic, local handlers,
 preflight precedence, provider contracts, timeouts, and gateway HTTP behavior.
-Ruff lint and formatting checks passed.
+Ruff lint, formatting, JavaScript syntax, and Compose configuration checks passed.
+Docker build/startup could not be verified locally because daemon access is denied;
+browser visual inspection is also pending.
 
 In the initial restricted workspace, package downloads were unavailable. Tests and
 lint were run against locally cached packages; a clean `uv sync` remains to be
@@ -151,15 +182,15 @@ Commits:
 1. `feat: add API and routing foundation`
 2. `feat: add OpenAI integration, fast paths, and guardrails`
 3. `feat: add SQLite request history and usage metrics`
-4. `feat: add reproducible routing and baseline evaluation` (ready to commit)
-5. Dashboard and release
+4. `feat: add reproducible routing and baseline evaluation`
+5. `feat: add dashboard and local release tooling` (ready to commit)
 
-The uncommitted provider work and local handlers are grouped into commit 2 to
+Provider integration and local handlers were grouped into commit 2 to
 preserve the target of 5–6 commits. Laya's adapter is still pending its documentation
 and can be included in a subsequent module or a sixth integration commit.
 
-## Next module
+## Remaining work
 
-Add the dashboard and release tooling. Laya integration still requires its exact
+The five planned implementation modules are now present. Laya integration still requires its exact
 library/service documentation. Live baseline measurements remain pending credentials.
 No latency, quality, or cost-savings claims have been measured yet.

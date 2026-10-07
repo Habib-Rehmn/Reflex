@@ -1,0 +1,18 @@
+services:
+  gateway:
+    build: .
+    ports:
+      - "127.0.0.1:8000:8000"
+    environment:
+      SYSTEM2_PROVIDER: ${SYSTEM2_PROVIDER:-disabled}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-}
+      PROVIDER_TIMEOUT_SECONDS: ${PROVIDER_TIMEOUT_SECONDS:-30}
+      OPENAI_MAX_OUTPUT_TOKENS: ${OPENAI_MAX_OUTPUT_TOKENS:-2048}
+      RETENTION_DAYS: ${RETENTION_DAYS:-30}
+      DATABASE_PATH: /app/data/reflex.db
+    volumes:
+      - reflex-data:/app/data
+    restart: unless-stopped
+volumes:
+  reflex-data:

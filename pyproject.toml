@@ -1,6 +1,6 @@
 [project]
 name = "reflex-gateway"
-version = "0.1.0"
+version = "0.5.0"
 description = "A System-1/System-2 AI routing gateway"
 requires-python = ">=3.12"
 dependencies = [
