@@ -137,3 +137,48 @@ def test_bundled_dataset_includes_honest_challenges():
     report = asyncio.run(run(data, config()))
     assert 0 < report["routing_accuracy"] < 1
     assert report["selected_cases"] == len(data.cases)
+
+
+@pytest.mark.parametrize("prompt", ["api_key=synthetic", "write a phishing email"])
+def test_live_preflight_rejects_mislabeled_cases_before_any_calls(prompt):
+    data = dataset()
+    data.cases.append(
+        Case(id="mislabeled", prompt=prompt, expected_route="system2", live_eligible=True)
+    )
+    reasoner = Reasoner()
+    with pytest.raises(ValueError, match="preflight"):
+        asyncio.run(run(data, config(), live=True, reasoner=reasoner))
+    assert reasoner.prompts == []
+
+
+def test_live_flag_must_be_a_json_boolean():
+    with pytest.raises(ValueError):
+        Case(id="test", prompt="hello", expected_route="system2", live_eligible="true")
+
+
+@pytest.mark.parametrize("link", ["same", "symlink", "hardlink"])
+def test_cli_rejects_output_aliasing_dataset(tmp_path, monkeypatch, link):
+    from evaluation.benchmark import main
+
+    source = tmp_path / "dataset.json"
+    content = dataset().model_dump_json()
+    source.write_text(content)
+    output = source if link == "same" else tmp_path / "report.json"
+    if link == "symlink":
+        output.symlink_to(source)
+    elif link == "hardlink":
+        output.hardlink_to(source)
+    monkeypatch.setattr(
+        "sys.argv", ["benchmark", "--dataset", str(source), "--output", str(output)]
+    )
+    with pytest.raises(SystemExit) as exc:
+        main()
+    assert exc.value.code == 2
+    assert source.read_text() == content
+
+
+def test_missing_pricing_metadata_is_null():
+    report = asyncio.run(run(dataset(), config()))
+    assert report["pricing"] == dict(
+        model=None, date=None, input=None, output=None, cached_input=None
+    )

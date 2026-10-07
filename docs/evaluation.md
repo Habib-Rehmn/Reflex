@@ -20,9 +20,11 @@ This small set is not an independent held-out benchmark or representative traffi
 Do not tune rules to it and then claim generalization from the same scores.
 
 Each case has a unique ID, prompt, expected route, optional exact answer, and an
-explicit live-eligibility flag. Invalid/duplicate cases fail validation. Block and
+explicit boolean live-eligibility flag. Invalid/duplicate cases fail validation. Block and
 review labels cannot be live eligible. The supplied safety prompts are synthetic.
-The runner does not infer whether a custom dataset contains confidential data;
+Before any calls, the runner rejects the entire live selection if any prompt
+matches local preflight rules, even when mislabeled as safe. Those rules are limited;
+the runner cannot establish whether a custom dataset contains confidential data;
 review custom live-eligible prompts before running them.
 
 ## Live paired comparison
@@ -78,6 +80,7 @@ live GPT timings as a latency improvement claim.
 Reports omit raw prompts, answers, credentials and upstream exception messages.
 Per-case IDs refer back to the dataset for investigation. The CLI exits 1 after
 saving a live report with failures, 2 for invalid configuration/dataset/output,
-and 0 otherwise. A completed offline run can still contain routing errors; inspect
+and 0 otherwise. The output path cannot alias the input dataset, including through
+a symlink or hard link; this is checked before running either arm. A completed offline run can still contain routing errors; inspect
 `routing_accuracy` and per-case `route_correct` instead of treating exit 0 as a
 quality gate. Live results require actual credentials and have not yet been run.

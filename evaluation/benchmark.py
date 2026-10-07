@@ -16,6 +16,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.config import Settings
 from app.gateway import Gateway, ProviderUnavailable
+from app.guardrails import preflight
 from app.models import QueryRequest, Route
 from app.openai_provider import OpenAIReasoner
 from app.telemetry import Observation, ReasoningResult, estimate_cost
@@ -27,7 +28,7 @@ class Case(BaseModel):
     prompt: str
     expected_route: Route
     expected_text: str | None = None
-    live_eligible: bool = False
+    live_eligible: bool = Field(default=False, strict=True)
 
     @model_validator(mode="after")
     def validate_prompt(self):
@@ -133,6 +134,10 @@ async def run(dataset, settings, *, live=False, repeats=1, seed=42, reasoner=Non
     cases = [case for case in dataset.cases if not live or case.live_eligible]
     if not cases:
         raise ValueError("No eligible evaluation cases")
+    # Check the complete selection before either arm makes any paid requests.
+    # Labels supplied by a custom dataset cannot bypass local preflight rules.
+    if live and any(preflight(case.prompt) is not None for case in cases):
+        raise ValueError("Live selection includes a prompt held or blocked by preflight")
     rng = random.Random(seed)
     gateway_rows, baseline_rows = [], []
     for _ in range(repeats):
@@ -163,10 +168,22 @@ async def run(dataset, settings, *, live=False, repeats=1, seed=42, reasoner=Non
         "timeout_seconds": settings.provider_timeout_seconds if live else None,
         "pricing": {
             "model": settings.pricing_model,
-            "date": str(settings.pricing_date),
-            "input": str(settings.input_usd_per_million),
-            "output": str(settings.output_usd_per_million),
-            "cached_input": str(settings.cached_input_usd_per_million),
+            "date": str(settings.pricing_date) if settings.pricing_date is not None else None,
+            "input": (
+                str(settings.input_usd_per_million)
+                if settings.input_usd_per_million is not None
+                else None
+            ),
+            "output": (
+                str(settings.output_usd_per_million)
+                if settings.output_usd_per_million is not None
+                else None
+            ),
+            "cached_input": (
+                str(settings.cached_input_usd_per_million)
+                if settings.cached_input_usd_per_million is not None
+                else None
+            ),
         },
         "routing_accuracy": sum(row["route_correct"] for row in gateway_rows) / len(gateway_rows),
         "gateway": gs,
@@ -197,6 +214,10 @@ def main():
     parser.add_argument("--seed", type=int, default=42)
     args = parser.parse_args()
     try:
+        if args.output.resolve() == args.dataset.resolve() or (
+            args.output.exists() and args.dataset.exists() and args.output.samefile(args.dataset)
+        ):
+            raise ValueError("Output cannot overwrite the dataset")
         dataset = Dataset.model_validate_json(args.dataset.read_text())
         settings = (
             Settings() if args.live else Settings(_env_file=None, system2_provider="disabled")

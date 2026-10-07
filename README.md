@@ -158,7 +158,7 @@ Tests exercise HTTP validation, FAQ responses, provider escalation, unavailable
 providers, and safety precedence without calling external services. The HTTP tests
 use HTTPX's ASGI transport to avoid network sockets and background threads.
 
-Validation: **134 Python tests passed**, plus the dashboard JavaScript behavior suite, including bounded arithmetic, local handlers,
+Validation: **141 Python tests passed**, plus the dashboard JavaScript behavior suite, including bounded arithmetic, local handlers,
 preflight precedence, provider contracts, timeouts, and gateway HTTP behavior.
 Ruff lint, formatting, JavaScript syntax, and Compose configuration checks passed.
 Docker build/startup could not be verified locally because daemon access is denied;
@@ -183,11 +183,13 @@ Commits:
 2. `feat: add OpenAI integration, fast paths, and guardrails`
 3. `feat: add SQLite request history and usage metrics`
 4. `feat: add reproducible routing and baseline evaluation`
-5. `feat: add dashboard and local release tooling` (ready to commit)
+5. `feat: add dashboard and local release tooling`
+6. `fix: guard live evaluation inputs and preserve datasets` (ready to commit)
 
 Provider integration and local handlers were grouped into commit 2 to
 preserve the target of 5–6 commits. Laya's adapter is still pending its documentation
-and can be included in a subsequent module or a sixth integration commit.
+and requires its repository/API link before implementation. The sixth commit fixes
+evaluation issues found during the final integration review.
 
 ## Remaining work
 
