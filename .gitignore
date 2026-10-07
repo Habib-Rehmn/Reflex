@@ -16,3 +16,6 @@ htmlcov/
 # Local project planning notes
 /project.md
 /docs/original-outline.md
+
+# Local benchmark results
+/reports/

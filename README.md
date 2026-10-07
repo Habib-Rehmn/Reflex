@@ -105,6 +105,18 @@ or savings are assumed. See [metrics documentation](docs/metrics.md) for configu
 retention, failure behavior, and latency definitions. Keep the history endpoints
 local until authentication is added.
 
+## Evaluate routing
+
+```bash
+uv run python -m evaluation.benchmark
+```
+
+The offline runner checks 34 labeled development cases and writes an ignored JSON
+report without API calls. The set includes known rule weaknesses; scores are not
+production-quality claims. An explicit `--live` option compares eligible prompts
+against direct GPT calls and incurs API charges. See [evaluation methodology](docs/evaluation.md)
+for eligibility, reproducibility, failure handling and scoring limits.
+
 ## Check changes
 
 ```bash
@@ -117,7 +129,7 @@ Tests exercise HTTP validation, FAQ responses, provider escalation, unavailable
 providers, and safety precedence without calling external services. The HTTP tests
 use HTTPX's ASGI transport to avoid network sockets and background threads.
 
-Validation: **124 tests passed**, including bounded arithmetic, local handlers,
+Validation: **132 tests passed**, including bounded arithmetic, local handlers,
 preflight precedence, provider contracts, timeouts, and gateway HTTP behavior.
 Ruff lint and formatting checks passed.
 
@@ -138,8 +150,8 @@ Commits:
 
 1. `feat: add API and routing foundation`
 2. `feat: add OpenAI integration, fast paths, and guardrails`
-3. `feat: add SQLite request history and usage metrics` (ready to commit)
-4. Evaluation
+3. `feat: add SQLite request history and usage metrics`
+4. `feat: add reproducible routing and baseline evaluation` (ready to commit)
 5. Dashboard and release
 
 The uncommitted provider work and local handlers are grouped into commit 2 to
@@ -148,7 +160,6 @@ and can be included in a subsequent module or a sixth integration commit.
 
 ## Next module
 
-Add a labeled evaluation dataset and a reproducible GPT-baseline comparison.
-Laya integration still requires its exact library/service documentation. The final
-module adds the dashboard and release tooling.
+Add the dashboard and release tooling. Laya integration still requires its exact
+library/service documentation. Live baseline measurements remain pending credentials.
 No latency, quality, or cost-savings claims have been measured yet.
